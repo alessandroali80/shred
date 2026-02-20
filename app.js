@@ -154,13 +154,38 @@ function playPluck(ctx, freq, startTime, duration) {
 }
 
 // ─────────────────────────────────────────────
+// WAKE LOCK — schermo sempre acceso
+// ─────────────────────────────────────────────
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch(e) {}
+  }
+}
+
+// Richiedi wake lock al primo click/touch
+document.addEventListener('click', () => { if (!wakeLock) requestWakeLock(); }, { once: true });
+document.addEventListener('touchstart', () => { if (!wakeLock) requestWakeLock(); }, { once: true });
+
+// Rilascia e ri-richiedi quando la pagina torna visibile
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+});
+
+// ─────────────────────────────────────────────
 // METRONOME
 // ─────────────────────────────────────────────
 let metroRunning = false;
 let metroBpm = 80;
+let metroVolume = 0.5;
 let metroNextBeat = 0;
 let metroScheduleId = null;
 let tapTimes = [];
+let metroGainNode = null;
 
 const pulseEl = document.getElementById('metroPulse');
 const bpmDisplay = document.getElementById('metroBpmDisplay');
@@ -175,14 +200,21 @@ function metroSchedule() {
 
   if (metroNextBeat < now) metroNextBeat = now;
 
+  // Crea un GainNode master per il volume
+  if (!metroGainNode) {
+    metroGainNode = ctx.createGain();
+    metroGainNode.connect(ctx.destination);
+  }
+  metroGainNode.gain.value = metroVolume;
+
   while (metroNextBeat < now + 0.2) {
     // Click sound
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(metroGainNode);
     osc.frequency.value = 1000;
-    gain.gain.setValueAtTime(0.3, metroNextBeat);
+    gain.gain.setValueAtTime(1.0, metroNextBeat);
     gain.gain.exponentialRampToValueAtTime(0.001, metroNextBeat + 0.03);
     osc.start(metroNextBeat);
     osc.stop(metroNextBeat + 0.04);
@@ -227,6 +259,10 @@ document.getElementById('metroToggle').onclick = () => {
 };
 document.getElementById('metroDec').onclick = () => setBpm(metroBpm - 2);
 document.getElementById('metroInc').onclick = () => setBpm(metroBpm + 2);
+document.getElementById('metroVolSlider').oninput = (e) => {
+  metroVolume = parseFloat(e.target.value);
+  if (metroGainNode) metroGainNode.gain.value = metroVolume;
+};
 
 // TAP tempo
 document.getElementById('metroTap').onclick = () => {
@@ -279,6 +315,7 @@ function showPage(pageId) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + pageId).classList.add('active');
   document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+  if (pageId === 'progress') renderProgressPage();
 }
 
 document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -335,7 +372,12 @@ function renderExercise(ex) {
             onclick="setBpm(${ex.bpm || 80}); metroStart()">
             🎵 Metronomo ${ex.bpm || 80} BPM
           </button>
+          <button class="btn btn-secondary" style="color:var(--success);border-color:var(--success)"
+            onclick="showLogBpmDialog('${ex.id}', ${ex.bpm || 80})">
+            📝 Annota BPM
+          </button>
         </div>
+        <div id="prog-badge-${ex.id}" style="display:none;font-size:0.78rem;margin-top:6px;padding:4px 8px;background:var(--surface2);border-radius:var(--radius-sm)"></div>
         <div class="tip-box"><strong>💡 Tip:</strong> ${ex.tip}</div>
       </div>
     </div>`;
@@ -359,23 +401,171 @@ function handlePlay(id, btn) {
   }
 }
 
+// Backing track consigliata per mese
+const monthBackingMap = { 1: 'BT-1', 2: 'BT-3', 3: 'BT-4', 4: 'BT-5' };
+
+// Timer per sezioni settimana
+const sectionTimers = {};
+
+function renderSectionTimer(key, defaultMinutes) {
+  return `
+    <div class="section-timer" id="stimer-${key}">
+      <span class="stimer-display" id="stimer-disp-${key}">${String(defaultMinutes).padStart(2,'0')}:00</span>
+      <button class="stimer-btn" id="stimer-btn-${key}" onclick="toggleSectionTimer('${key}', ${defaultMinutes})">▶</button>
+      <button class="stimer-btn" style="font-size:0.7rem" onclick="resetSectionTimer('${key}', ${defaultMinutes})">↺</button>
+    </div>`;
+}
+
+function toggleSectionTimer(key, defaultMinutes) {
+  const t = sectionTimers[key];
+  const btn = document.getElementById('stimer-btn-' + key);
+  if (!t || !t.running) {
+    // Avvia
+    if (!sectionTimers[key]) {
+      sectionTimers[key] = { seconds: defaultMinutes * 60, running: false, interval: null };
+    }
+    sectionTimers[key].running = true;
+    btn.textContent = '⏸';
+    sectionTimers[key].interval = setInterval(() => {
+      const st = sectionTimers[key];
+      if (st.seconds <= 0) {
+        clearInterval(st.interval);
+        st.running = false;
+        btn.textContent = '▶';
+        document.getElementById('stimer-disp-' + key).style.color = 'var(--accent)';
+        return;
+      }
+      st.seconds--;
+      updateSectionTimerDisplay(key);
+    }, 1000);
+  } else {
+    // Pausa
+    clearInterval(sectionTimers[key].interval);
+    sectionTimers[key].running = false;
+    btn.textContent = '▶';
+  }
+}
+
+function resetSectionTimer(key, defaultMinutes) {
+  if (sectionTimers[key]) {
+    clearInterval(sectionTimers[key].interval);
+    sectionTimers[key].running = false;
+    sectionTimers[key].seconds = defaultMinutes * 60;
+  } else {
+    sectionTimers[key] = { seconds: defaultMinutes * 60, running: false, interval: null };
+  }
+  document.getElementById('stimer-btn-' + key).textContent = '▶';
+  const disp = document.getElementById('stimer-disp-' + key);
+  disp.style.color = '';
+  updateSectionTimerDisplay(key);
+}
+
+function updateSectionTimerDisplay(key) {
+  const st = sectionTimers[key];
+  if (!st) return;
+  const m = Math.floor(st.seconds / 60);
+  const s = st.seconds % 60;
+  const disp = document.getElementById('stimer-disp-' + key);
+  if (disp) disp.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
 function renderMonthPage(monthData, pageId) {
   const container = document.getElementById('page-' + pageId);
+  const btId = monthBackingMap[monthData.id];
+  const bt = PROGRAM.backingTracks.find(b => b.id === btId);
+  const ytUrl = bt ? `https://www.youtube.com/results?search_query=${encodeURIComponent(bt.youtube)}` : '#';
+  const btLabel = bt ? `${bt.title} — ${bt.bpm} BPM` : '';
+
+  // Sub-nav tabs per settimana
+  const weekTabs = monthData.weeks.map((w, i) =>
+    `<div class="week-tab ${i === 0 ? 'active' : ''}" data-week="${pageId}-${i}" onclick="showWeek('${pageId}', ${i})">Sett. ${w.id}</div>`
+  ).join('');
+
   let html = `
     <div class="month-header">
       <div class="month-num">Mese ${monthData.id}</div>
       <div class="month-title">${monthData.title}</div>
       <div class="month-obj">${monthData.objective}</div>
-    </div>`;
+    </div>
+    <div class="week-tabs-bar">${weekTabs}</div>`;
 
-  monthData.weeks.forEach(week => {
-    html += `<div class="week-label">📅 Settimane ${week.id} — ${week.title.split('—')[1] || ''}</div>`;
-    week.exercises.forEach(ex => {
-      html += renderExercise(ex);
-    });
+  monthData.weeks.forEach((week, wi) => {
+    const wKey = `${pageId}-${wi}`;
+    const exHtml = week.exercises.map(ex => renderExercise(ex)).join('');
+
+    const warmupKey = `warmup-${wKey}`;
+    const techKey = `tech-${wKey}`;
+    const appKey = `app-${wKey}`;
+
+    html += `
+      <div class="week-panel ${wi === 0 ? 'active' : ''}" id="week-panel-${wKey}">
+
+        <!-- RISCALDAMENTO -->
+        <div class="session-section">
+          <div class="session-section-header">
+            <span class="session-section-icon">🔥</span>
+            <span class="session-section-title">Riscaldamento</span>
+            <span class="session-section-duration">5 min</span>
+            ${renderSectionTimer(warmupKey, 5)}
+          </div>
+          <div class="session-section-body">
+            <div class="warmup-list">
+              <div class="warmup-item">🎸 Cromatici lenti (1 ottava, su e giù) — 1 min</div>
+              <div class="warmup-item">✋ Stretching passivo delle dita — 1 min</div>
+              <div class="warmup-item">🎵 Picking lento controllato su una corda — 2 min</div>
+              <div class="warmup-item">📏 Spider exercise lentissimo — 1 min</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECNICA PRINCIPALE -->
+        <div class="session-section">
+          <div class="session-section-header">
+            <span class="session-section-icon">⚡</span>
+            <span class="session-section-title">Tecnica Principale</span>
+            <span class="session-section-duration">15-20 min</span>
+            ${renderSectionTimer(techKey, 18)}
+          </div>
+          <div class="session-section-body">
+            <div class="week-label" style="margin-top:0">📅 ${week.title}</div>
+            ${exHtml}
+          </div>
+        </div>
+
+        <!-- APPLICAZIONE MUSICALE -->
+        <div class="session-section">
+          <div class="session-section-header">
+            <span class="session-section-icon">🎶</span>
+            <span class="session-section-title">Applicazione Musicale</span>
+            <span class="session-section-duration">5-10 min</span>
+            ${renderSectionTimer(appKey, 8)}
+          </div>
+          <div class="session-section-body">
+            <p style="font-size:0.82rem;color:var(--text2);margin-bottom:10px">Improvvisa liberamente sulle scale studiate questa settimana. Integra le tecniche appena praticate in frasi musicali vere.</p>
+            ${bt ? `<a class="bt-search" href="${ytUrl}" target="_blank" rel="noopener" style="display:inline-flex;margin-bottom:8px">
+              🎵 Backing Track consigliata: <strong style="color:var(--accent2);margin-left:4px">${btLabel}</strong>
+            </a>` : ''}
+            <div style="font-size:0.78rem;color:var(--text2);margin-top:8px">
+              💡 <em>Regola: 1 frase lenta espressiva + 1 frase veloce tecnica + silenzio. Poi ripeti. Non suonare in modo continuo — il silenzio fa parte della musica.</em>
+            </div>
+          </div>
+        </div>
+
+      </div>`;
   });
 
   container.innerHTML = html;
+}
+
+function showWeek(pageId, weekIndex) {
+  // Aggiorna tab attive
+  document.querySelectorAll(`[data-week^="${pageId}-"]`).forEach((t, i) => {
+    t.classList.toggle('active', i === weekIndex);
+  });
+  // Aggiorna panel attivi
+  document.querySelectorAll(`[id^="week-panel-${pageId}-"]`).forEach((p, i) => {
+    p.classList.toggle('active', i === weekIndex);
+  });
 }
 
 function renderMelodicPage() {
@@ -452,6 +642,132 @@ function renderHomePage() {
 }
 
 // ─────────────────────────────────────────────
+// TRACCIAMENTO PROGRESSI (localStorage)
+// ─────────────────────────────────────────────
+function getProgress() {
+  try { return JSON.parse(localStorage.getItem('shredProgress') || '{}'); } catch(e) { return {}; }
+}
+
+function saveProgress(data) {
+  try { localStorage.setItem('shredProgress', JSON.stringify(data)); } catch(e) {}
+}
+
+function logExerciseBpm(exId, bpm) {
+  const p = getProgress();
+  if (!p[exId]) p[exId] = { sessions: [] };
+  p[exId].sessions.push({ date: new Date().toISOString().slice(0,10), bpm });
+  // Tieni solo gli ultimi 30 log per esercizio
+  if (p[exId].sessions.length > 30) p[exId].sessions = p[exId].sessions.slice(-30);
+  saveProgress(p);
+  renderProgressBadge(exId);
+}
+
+function getExerciseBestBpm(exId) {
+  const p = getProgress();
+  if (!p[exId] || !p[exId].sessions.length) return null;
+  return Math.max(...p[exId].sessions.map(s => s.bpm));
+}
+
+function getExerciseLastBpm(exId) {
+  const p = getProgress();
+  if (!p[exId] || !p[exId].sessions.length) return null;
+  return p[exId].sessions[p[exId].sessions.length - 1].bpm;
+}
+
+function renderProgressBadge(exId) {
+  const badge = document.getElementById('prog-badge-' + exId);
+  const best = getExerciseBestBpm(exId);
+  const last = getExerciseLastBpm(exId);
+  if (badge && best !== null) {
+    badge.innerHTML = `<span style="color:var(--success)">✓ Miglior: ${best} BPM</span> <span style="color:var(--text2)">· Ultimo: ${last} BPM</span>`;
+    badge.style.display = 'block';
+  }
+}
+
+function showLogBpmDialog(exId, currentBpm) {
+  const input = prompt(`Annota il BPM raggiunto oggi per questo esercizio:\n(BPM di partenza: ${currentBpm})`, currentBpm);
+  if (input === null) return;
+  const bpm = parseInt(input);
+  if (!isNaN(bpm) && bpm > 0) {
+    logExerciseBpm(exId, bpm);
+  }
+}
+
+function renderProgressPage() {
+  const p = getProgress();
+  const container = document.getElementById('page-progress');
+  const ids = Object.keys(p);
+
+  if (ids.length === 0) {
+    container.innerHTML = `
+      <div class="month-header">
+        <div class="month-num">Progressi</div>
+        <div class="month-title">Nessun dato ancora</div>
+        <div class="month-obj">Inizia ad allenarti e annota i tuoi BPM — appariranno qui.</div>
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="month-header">
+      <div class="month-num">I Tuoi Progressi</div>
+      <div class="month-title">Storico BPM per esercizio</div>
+      <div class="month-obj">Dati salvati localmente sul tuo dispositivo.</div>
+    </div>
+    <div style="text-align:right;margin-bottom:10px">
+      <button class="btn btn-secondary" style="font-size:0.75rem;padding:6px 12px" onclick="exportProgress()">📤 Esporta JSON</button>
+      <button class="btn btn-secondary" style="font-size:0.75rem;padding:6px 12px;margin-left:6px;color:var(--accent)" onclick="clearProgress()">🗑 Cancella tutto</button>
+    </div>`;
+
+  ids.forEach(exId => {
+    const ex = exerciseStore[exId];
+    const sessions = p[exId].sessions;
+    const best = Math.max(...sessions.map(s => s.bpm));
+    const last = sessions[sessions.length - 1];
+    const title = ex ? ex.title : exId;
+    const target = ex ? ex.bpmTarget : null;
+    const pct = target ? Math.min(100, Math.round((best / target) * 100)) : null;
+
+    html += `
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:0.72rem;color:var(--accent);font-weight:700;letter-spacing:1px;text-transform:uppercase">${exId}</div>
+        <div style="font-size:0.9rem;font-weight:700;margin:4px 0">${title}</div>
+        <div style="display:flex;gap:16px;font-size:0.82rem;color:var(--text2);margin:6px 0">
+          <span>🏆 Miglior: <strong style="color:var(--success)">${best} BPM</strong></span>
+          <span>📅 Ultimo: <strong>${last.bpm} BPM</strong> (${last.date})</span>
+          ${target ? `<span>🎯 Target: <strong>${target} BPM</strong></span>` : ''}
+        </div>
+        ${pct !== null ? `
+          <div class="progress-bar" style="margin-top:4px">
+            <div class="progress-fill" style="width:${pct}%"></div>
+          </div>
+          <div style="font-size:0.72rem;color:var(--text2);margin-top:2px">${pct}% verso il target</div>` : ''}
+        <div style="font-size:0.72rem;color:var(--text2);margin-top:6px">${sessions.length} sessioni registrate</div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function exportProgress() {
+  const p = getProgress();
+  const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `shred-progress-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearProgress() {
+  if (confirm('Cancellare tutti i progressi salvati? Questa azione non è reversibile.')) {
+    localStorage.removeItem('shredProgress');
+    renderProgressPage();
+  }
+}
+
+// ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
 function init() {
@@ -461,6 +777,11 @@ function init() {
   });
   renderMelodicPage();
   renderBackingPage();
+  renderProgressPage();
+
+  // Mostra badge progressi su tutti gli esercizi già registrati
+  const p = getProgress();
+  Object.keys(p).forEach(exId => renderProgressBadge(exId));
 
   // Load audio on first user interaction
   document.body.addEventListener('touchstart', () => {

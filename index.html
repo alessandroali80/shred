@@ -333,6 +333,89 @@
     .page { display: none; }
     .page.active { display: block; }
 
+    /* ── WEEK TABS ── */
+    .week-tabs-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .week-tabs-bar::-webkit-scrollbar { display: none; }
+    .week-tab {
+      flex: 0 0 auto;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: var(--surface2);
+      color: var(--text2);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    .week-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* ── WEEK PANELS ── */
+    .week-panel { display: none; }
+    .week-panel.active { display: block; }
+
+    /* ── SESSION SECTIONS ── */
+    .session-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .session-section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .session-section-icon { font-size: 1.1rem; }
+    .session-section-title { font-size: 0.9rem; font-weight: 800; flex: 1; }
+    .session-section-duration { font-size: 0.72rem; color: var(--accent2); font-weight: 700; }
+    .session-section-body { padding: 14px; }
+
+    /* ── SECTION TIMER ── */
+    .section-timer {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    .stimer-display {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--success);
+      min-width: 38px;
+      text-align: center;
+    }
+    .stimer-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .stimer-btn:active { background: var(--border); }
+
+    /* ── WARMUP ITEMS ── */
+    .warmup-list { display: flex; flex-direction: column; gap: 6px; }
+    .warmup-item {
+      font-size: 0.82rem;
+      color: var(--text2);
+      padding: 6px 10px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+    }
+
     /* ── PROGRESS ── */
     .progress-bar {
       height: 4px;
@@ -375,12 +458,14 @@
 
 <nav class="nav-tabs" id="navTabs">
   <div class="nav-tab active" data-page="home">Home</div>
+  <div class="nav-tab" data-page="tecnica">Tecnica</div>
   <div class="nav-tab" data-page="m1">Mese 1</div>
   <div class="nav-tab" data-page="m2">Mese 2</div>
   <div class="nav-tab" data-page="m3">Mese 3</div>
   <div class="nav-tab" data-page="m4">Mese 4</div>
   <div class="nav-tab" data-page="melodic">Melodici</div>
   <div class="nav-tab" data-page="backing">Backing</div>
+  <div class="nav-tab" data-page="progress">Progressi</div>
 </nav>
 
 <main id="mainContent">
@@ -418,6 +503,158 @@
     </div>
   </div>
 
+  <!-- TECNICA PAGE -->
+  <div class="page" id="page-tecnica">
+
+    <div class="card" style="background:linear-gradient(135deg,#1a1a2e,#22223b);border-color:#e63946">
+      <div style="font-size:0.72rem;color:var(--accent);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Fondamenta Tecniche</div>
+      <div style="font-size:1.2rem;font-weight:800;margin-bottom:4px">Pick Slanting & TWPS</div>
+      <div style="font-size:0.82rem;color:var(--text2)">La meccanica alla base della velocità — Troy Grady / Cracking the Code</div>
+    </div>
+
+    <!-- SEZIONE 1: IL PROBLEMA -->
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.5px">Il Problema: Perché il Picking Si Blocca</div>
+
+    <div class="principle-card">
+      <div class="principle-title">Il Plettro si Incaglia</div>
+      <div class="principle-text">Quando fai alternate picking ad alta velocità, il plettro deve attraversare la corda due volte per ogni nota: una volta in discesa (down stroke) e una volta in salita (up stroke). Il problema è geometrico: se il plettro è piatto rispetto alle corde, dopo ogni colpo si trova <em>sotto</em> la corda successiva — bloccato. Devi "scavare fuori" con forza, il che crea resistenza, rumore e limite di velocità.</div>
+    </div>
+
+    <div class="principle-card">
+      <div class="principle-title">La Soluzione: Inclinare il Plettro</div>
+      <div class="principle-text">Se inclini il plettro rispetto al piano delle corde, il suo bordo attivo "scappa" automaticamente verso l'alto o verso il basso dopo ogni colpo — senza sforzo. Questo è il pick slanting. Non è una trucco: è la meccanica fisica che usano tutti i grandi shredder, spesso senza saperlo.</div>
+    </div>
+
+    <!-- SEZIONE 2: I TRE TIPI -->
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.5px">I Tre Tipi di Pick Slanting</div>
+
+    <div class="ex-card" id="excard-ps-dps">
+      <div class="ex-header" onclick="toggleEx('ps-dps')">
+        <div class="ex-header-left">
+          <div class="ex-id">TIPO 1</div>
+          <div class="ex-title">DPS — Downward Pick Slanting</div>
+          <span class="ex-technique">Discendente</span>
+        </div>
+        <div class="ex-chevron">▼</div>
+      </div>
+      <div class="ex-body">
+        <div class="tip-box" style="margin-top:0">
+          <strong>Come si fa:</strong> Il bordo superiore del plettro è inclinato verso la chitarra, il bordo inferiore si allontana. Visto di lato sembra uno "/" (slash).<br><br>
+          <strong>Cosa succede:</strong> Dopo ogni UP stroke il plettro scappa verso l'alto, al di sopra del piano delle corde. Questo significa che i cambi di corda in direzione <em>ascendente</em> (da corda bassa a corda alta) avvengono dopo un UP stroke — e sono fluidi.<br><br>
+          <strong>Limite:</strong> I cambi di corda in discesa (da corda alta a bassa) avvengono dopo un DOWN stroke — e lì il plettro è intrappolato sotto la corda. Devi "scavare", quindi questo movimento è più difficile.<br><br>
+          <strong>Chi lo usa:</strong> Eric Johnson, John Petrucci (parzialmente), molti chitarristi di rock classico.<br><br>
+          <strong>Quando usarlo:</strong> Pattern che finiscono su un numero pari di note per corda (2, 4...) e cambiano corda andando verso l'acuto.
+        </div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="excard-ps-ups">
+      <div class="ex-header" onclick="toggleEx('ps-ups')">
+        <div class="ex-header-left">
+          <div class="ex-id">TIPO 2</div>
+          <div class="ex-title">UPS — Upward Pick Slanting</div>
+          <span class="ex-technique">Ascendente</span>
+        </div>
+        <div class="ex-chevron">▼</div>
+      </div>
+      <div class="ex-body">
+        <div class="tip-box" style="margin-top:0">
+          <strong>Come si fa:</strong> L'opposto del DPS. Il bordo inferiore del plettro è inclinato verso la chitarra. Visto di lato sembra un "\" (backslash).<br><br>
+          <strong>Cosa succede:</strong> Dopo ogni DOWN stroke il plettro scappa verso il basso, al di sotto del piano delle corde. I cambi di corda in direzione <em>discendente</em> (da corda alta a bassa) avvengono dopo un DOWN stroke — fluidi.<br><br>
+          <strong>Limite:</strong> Speculare al DPS: i cambi in ascesa sono difficili.<br><br>
+          <strong>Chi lo usa:</strong> Yngwie Malmsteen (quasi esclusivamente UPS), molti chitarristi neoclassici.<br><br>
+          <strong>Quando usarlo:</strong> Pattern che scendono attraverso le corde, o lick che finiscono sempre su un DOWN stroke prima del cambio.
+        </div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="excard-ps-twps">
+      <div class="ex-header" onclick="toggleEx('ps-twps')">
+        <div class="ex-header-left">
+          <div class="ex-id">TIPO 3</div>
+          <div class="ex-title">TWPS — Two Way Pick Slanting</div>
+          <span class="ex-technique">⭐ Il più potente</span>
+        </div>
+        <div class="ex-chevron">▼</div>
+      </div>
+      <div class="ex-body">
+        <div class="tip-box" style="margin-top:0">
+          <strong>Cos'è:</strong> La capacità di alternare automaticamente tra DPS e UPS in base alla direzione del cambio di corda. Il polso ruota leggermente ad ogni cambio di direzione.<br><br>
+          <strong>La magia:</strong> Con il TWPS puoi suonare qualsiasi numero di note per corda (2, 3, 4, 5...) in qualsiasi direzione senza incagliarti mai. È la tecnica che sblocca il 3NPC (3 note per corda) ad alta velocità — e quindi Another Day.<br><br>
+          <strong>Perché il 3NPC è difficile:</strong> Con 3 note per corda, il cambio avviene sempre dopo un UP stroke in salita e dopo un DOWN stroke in discesa (o viceversa — dipende da dove inizi). Senza TWPS automatico, ad alta velocità questi cambi "dispari" diventano ingestibili.<br><br>
+          <strong>Come si sviluppa:</strong> Non si impara coscientemente inclinando il polso — si sviluppa con la ripetizione di esercizi 3NPC lenti e puliti. Il cervello automatizza la rotazione. Puoi accelerare il processo guardandoti suonare (specchio o video) e verificando che il polso si muova.<br><br>
+          <strong>Chi lo usa:</strong> John Petrucci, Frank Gambale, Guthrie Govan — praticamente tutti i chitarristi tecnici moderni che suonano veloce e pulito.<br><br>
+          <strong>Segnale che ce l'hai:</strong> Il 3NPC su e giù suona ugualmente pulito in entrambe le direzioni, e i cambi di corda sono inudibili.
+        </div>
+      </div>
+    </div>
+
+    <!-- SEZIONE 3: ESCAPE STROKES -->
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.5px">Escape Strokes — Il Meccanismo Fisico</div>
+
+    <div class="principle-card">
+      <div class="principle-title">Down Escape (DE)</div>
+      <div class="principle-text">Il plettro, dopo il colpo, si sposta verso il basso rispetto al piano delle corde — "scappa" verso il basso. Utile per cambiare corda verso le corde gravi (da e verso E) dopo un DOWN stroke. Tipico del UPS.</div>
+    </div>
+
+    <div class="principle-card">
+      <div class="principle-title">Up Escape (UE)</div>
+      <div class="principle-text">Il plettro dopo il colpo si sposta verso l'alto — "scappa" verso l'alto. Utile per cambiare corda verso le corde acute (da E verso e) dopo un UP stroke. Tipico del DPS.</div>
+    </div>
+
+    <div class="principle-card">
+      <div class="principle-title">Double Escape (DBX)</div>
+      <div class="principle-text">Il plettro descrive una piccola curva a U: scappa sia verso l'alto che verso il basso. Permette cambi di corda dopo qualsiasi stroke. È tecnicamente più impegnativo ma dà massima libertà. Usato nei pattern a numero dispari di note per corda (1NPC, 3NPC) senza cambiare slant.</div>
+    </div>
+
+    <!-- SEZIONE 4: PETRUCCI E IL 3NPC -->
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.5px">Petrucci e il 3NPC — Another Day nel Dettaglio</div>
+
+    <div class="ex-card" id="excard-ps-anotherday">
+      <div class="ex-header" onclick="toggleEx('ps-anotherday')">
+        <div class="ex-header-left">
+          <div class="ex-id">ANALISI</div>
+          <div class="ex-title">Perché Another Day è Difficile</div>
+          <span class="ex-technique">3NPC + Sestine</span>
+        </div>
+        <div class="ex-chevron">▼</div>
+      </div>
+      <div class="ex-body">
+        <div class="tip-box" style="margin-top:0">
+          <strong>Il ritmo:</strong> Sestine di trentaduesimi. Vuol dire 6 note per ogni beat. A 138 BPM (il tempo di Another Day) stai suonando 138 × 6 = 828 note al minuto. Equivale a sedicesimi a 207 BPM — uno dei run più veloci del repertorio rock mainstream.<br><br>
+          <strong>Il pattern:</strong> Scala di La minore naturale in 3NPC (3 note per corda), posizione 12ª. Sale attraverso 4-6 corde consecutive senza fermarsi.<br><br>
+          <strong>Il problema meccanico:</strong> Con 3 note per corda il cambio di corda avviene sempre su un stroke diverso ad ogni corda. Salendo: la 1ª e la 3ª corda cambiano dopo UP, la 2ª e la 4ª dopo DOWN. Senza TWPS automatico, ad alta velocità questi cambi "dispari" diventano ingestibili.<br><br>
+          <strong>La soluzione di Petrucci:</strong> TWPS fluido sviluppato in decenni di pratica. Il polso ruota impercettibilmente ad ogni cambio di corda. Da fuori sembra che suoni "piatto" ma non lo è.<br><br>
+          <strong>Come arrivarci tu:</strong> Il programma ti porta lì in 4 mesi. Prima consolidi il 3NPC a 100 BPM (già ok), poi porti il TWPS a 130 BPM (Mese 1-2), poi introduci le sestine (Mese 2), poi applichi il tutto in posizione 12ª (Mese 3-4). Non esiste una scorciatoia — ma esiste un percorso preciso.
+        </div>
+      </div>
+    </div>
+
+    <!-- SEZIONE 5: AUTODIAGNOSI -->
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.5px">Autodiagnosi — Come Sai se Stai Sbagliando</div>
+
+    <div class="principle-card" style="border-left-color:var(--accent2)">
+      <div class="principle-title" style="color:var(--accent2)">Senti un "click" al cambio di corda</div>
+      <div class="principle-text">Il plettro si incaglia sulla corda prima del cambio. Causa: plettro piatto o pick slanting errato per quella direzione. Soluzione: rallenta di 20 BPM e focalizzati solo sul cambio specifico, non sull'intera frase.</div>
+    </div>
+
+    <div class="principle-card" style="border-left-color:var(--accent2)">
+      <div class="principle-title" style="color:var(--accent2)">La discesa è più difficile della salita</div>
+      <div class="principle-text">Asimmetria tipica di chi usa solo UPS o solo DPS. Devi sviluppare l'altro slant. Dedica 2 sessioni intere a suonare solo pattern discendenti, partendo da 60 BPM. La simmetria si costruisce, non arriva da sola.</div>
+    </div>
+
+    <div class="principle-card" style="border-left-color:var(--accent2)">
+      <div class="principle-title" style="color:var(--accent2)">C'è un muro fisso di BPM che non riesci a superare</div>
+      <div class="principle-text">Hai un plateau? Quasi sempre non è un problema di forza o velocità — è un problema meccanico. Il plettro fa qualcosa di inefficiente che a bassa velocità non noti ma ad alta velocità esplode. Registrati e guarda la mano destra in slow motion. Cerca dove il movimento diventa improvvisamente rigido.</div>
+    </div>
+
+    <div class="principle-card" style="border-left-color:var(--accent2)">
+      <div class="principle-title" style="color:var(--accent2)">Suona pulito ma senza dinamica</div>
+      <div class="principle-text">Meccanicamente ok, musicalmente morto. Il pick slanting corretto riduce lo sforzo fisico — ma devi reindirizzare quell'energia risparmiata verso le dinamiche. Nota più forte, nota più piano, accenti, sfumature. Velocità senza espressività è tecnica acrobatica, non musica.</div>
+    </div>
+
+  </div>
+
   <!-- MONTH PAGES (generati da JS) -->
   <div class="page" id="page-m1"></div>
   <div class="page" id="page-m2"></div>
@@ -425,6 +662,7 @@
   <div class="page" id="page-m4"></div>
   <div class="page" id="page-melodic"></div>
   <div class="page" id="page-backing"></div>
+  <div class="page" id="page-progress"></div>
 </main>
 
 <!-- METRONOME BAR -->
@@ -435,6 +673,12 @@
     <button class="metro-btn" id="metroDec">−</button>
     <button class="metro-btn" id="metroInc">+</button>
     <button class="metro-btn" id="metroTap">TAP</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+    <span style="font-size:0.75rem">🔈</span>
+    <input type="range" id="metroVolSlider" min="0" max="1" step="0.05" value="0.5"
+      style="width:60px;accent-color:var(--accent);cursor:pointer">
+    <span style="font-size:0.75rem">🔊</span>
   </div>
   <button class="metro-toggle" id="metroToggle">▶</button>
   <div class="timer-display" id="timerDisplay">--:--</div>
